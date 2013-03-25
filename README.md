@@ -6,6 +6,6 @@ Data flow:
   * Serve events on a socket 
 * spark
   * Catch event stream from socket
-  * Generate ARGs over KDE surfaces
+  * Generate ARGs for KDE slices
 * gt
   * Serve final KDE to browser
