@@ -1,0 +1,12 @@
+{
+ "catalog": "kde-catalog",
+ "stores": [
+  {
+   "store": "kdegt:fs",
+   "params": {
+     "type": "fs",
+     "path": "/Users/jeremy/Documents/Development/github/stream-kde/spark/rasters"
+   }
+  }
+ ]
+}
