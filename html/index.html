@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html style="width: 100%; height: 100%">
+<html style="width: 95%; height: 95%">
 <head>
-	<title>KDE</title>
+	<title>KDE of Seattle 911 call stream, sped up 20,000 times</title>
 	<meta charset="utf-8" />
 
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,31 +17,57 @@
 	<div id="map" style="width: 100%; height: 100%"></div>
 
 	<script>
-
-		var map = L.map('map').setView([47.25014, -122.4404], 13);
-
-		L.tileLayer('http://{s}.tile.cloudmade.com/BC9A493B41014CAABB98F0471D759707/997/256/{z}/{x}/{y}.png', {
-			maxZoom: 18,
-			attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://cloudmade.com">CloudMade</a>'
-		}).addTo(map);
-
-
-		var kdeURL = 'http://localhost:8888/kde', 
-		    kdeBounds = [[47.25014, -122.4404], [47.59052, -122.2158]]
+		var map = L.map('map').setView([47.60801, -122.33139], 12);
+	//	var map = L.map('map', {maxZoom: 14}).setView([47.60801, -122.33139], 13);
+    //L.tileLayer('http://{s}.tiles.mapbox.com/v3/mapbox.world-light/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map)
+    //L.tileLayer('http://{s}.tile.stamen.com/toner/{z}/{x}/{y}.png').addTo(map)
+    L.tileLayer('http://{s}.tile.stamen.com/terrain/{z}/{x}/{y}.png',
+                {attribution: 'Map data &copy;2013 OpenStreetMap contributors, Tiles &copy;2013 Stamen Design'}
+               ).addTo(map);
+		//var kdeURL = 'http://192.168.16.41:8888/kde', 
+		var kdeURL = 'http://tr01.azavea.com/stream-kde/current.png'
+		kdeBounds = [[47.43884, -122.4404], [47.78403, -122.2068]]
 		
 		var kde = new L.ImageOverlay(kdeURL, kdeBounds);
+    var oldKde = null;
 
 		map.addLayer(kde)
-		kde.setOpacity(0.5)
+
+    var opacity = 1.0
+    var newKdeOpacity = 0;
+    var oldKdeOpacity = 0;
+
+		kde.setOpacity(opacity)
 		
 		// Refresh image layer
 		setInterval(function() {
-			map.removeLayer(kde);
-			kde = new L.ImageOverlay(kdeURL, kdeBounds);
-			map.addLayer(kde);
-			kde.setOpacity(0.5);
-		}, 5 * 1000);
+      if (oldKde != null) {
+        map.removeLayer(oldKde);
+      }
+      oldKde = kde;
+      oldKdeOpacity = newKdeOpacity;
 
+			var newKde = new L.ImageOverlay(kdeURL, kdeBounds);
+			map.addLayer(newKde);
+			newKde.setOpacity(0.1);
+      newKdeOpacity = 0.1;      
+      kde = newKde;
+		}, 1 * 1750);
+
+
+    // fade in, fade out
+    setInterval(function() {
+      if (oldKdeOpacity > 0) {
+        if (oldKde != null) {
+          oldKdeOpacity = oldKdeOpacity - 0.1;
+          oldKde.setOpacity( oldKdeOpacity );
+        }
+      }
+      if (newKdeOpacity < 1) {
+        newKdeOpacity = newKdeOpacity + 0.1;
+        kde.setOpacity( newKdeOpacity );
+      }
+    }, 50);
 
 		var popup = L.popup();
 

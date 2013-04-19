@@ -5,7 +5,7 @@
    "store": "kdegt:fs",
    "params": {
      "type": "fs",
-     "path": "/Users/jeremy/Documents/Development/github/stream-kde/spark/rasters"
+     "path": "/home/jmarcus/projects/github/stream-kde/spark/rasters"
    }
   }
  ]

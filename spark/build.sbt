@@ -10,7 +10,13 @@ resolvers += "Sonatype snapshots" at "http://oss.sonatype.org/content/repositori
 
 resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
 
+resolvers += "Spray Repository" at "http://repo.spray.cc/"
+
 libraryDependencies += "org.spark-project" % "spark-streaming_2.9.2" % "0.7.0"
+
+libraryDependencies += "xerces" % "xercesImpl" % "2.9.1"
+
+libraryDependencies += "xalan" % "xalan" % "2.7.1"
 
 // libraryDependencies += "com.azavea.geotrellis" % "geotrellis_2.10" % "0.8.0"
 
