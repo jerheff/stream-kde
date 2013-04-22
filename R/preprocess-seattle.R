@@ -6,7 +6,7 @@ library(spatstat)
 library(plyr)
 
 # data directory (no trailing slash)
-directory = "/Users/jeremy/Documents/Development/github/stream-kde/R"
+directory = "/home/jmarcus/projects/github/stream-kde/R"
 
 # read in raw 911 calls
 calls.raw = read.csv(file.path(directory,"Seattle_Police_Department_911_Incident_Response.csv"),
@@ -35,11 +35,11 @@ calls.clean = calls.simple[!is.na(calls.simple$datetime),]
 calls.lonlat = calls.clean[,c("Longitude","Latitude")]
 
 # create a point set
-calls.sp.lonlat = SpatialPoints(calls.lonlat, proj4string=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+calls.sp.lonlat = SpatialPoints(calls.lonlat, proj4string=CRS("+proj=longlat +datum=WGS84 +no_defs"))
 summary(calls.sp.lonlat)
 
 # project to spherical mercator EPSG:3857 http://spatialreference.org/ref/sr-org/6864/
-calls.sp.meters = spTransform(calls.sp.lonlat, CRS("+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +a=6378137 +b=6378137 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs "))
+calls.sp.meters = spTransform(calls.sp.lonlat, CRS("+proj=merc +lon_0=0 +lat_ts=0.0 +k=1 +x_0=0 +y_0=0 +a=6378137 +b=6378137 +units=m +wktext +nadgrids=@null +no_defs "))
 summary(calls.sp.meters)
 
 # find bounding box

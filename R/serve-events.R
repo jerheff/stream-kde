@@ -6,7 +6,7 @@ library(lubridate)
 library(plyr)
 
 # data directory (no trailing slash)
-directory = "/Users/jeremy/Documents/Development/github/stream-kde/R"
+directory = "/home/jmarcus/projects/github/stream-kde/R"
 
 # data file
 file = "seattle_911_projected.csv"
@@ -60,7 +60,7 @@ formatevent <- function(row) {
 # define a function to determine what rows need to be sent.
 currentevents <- function(last.sent.time, current.time) {
   new.event.rows = NULL
-  new.event.rows = which(events.sorted$datetimenumber > last.sent.time & events.sorted$datetimenumber <= current.time)
+  new.event.rows = which(events.sorted$datetime.number > last.sent.time & events.sorted$datetime.number <= current.time)
   return(new.event.rows)
 }
 
@@ -80,13 +80,23 @@ eventserver <- function(real.start, fake.start, scale=1.0) {
     socket.connected = TRUE
     
     while(time.cursor <= data.end & socket.connected == TRUE) {
+      print("In Socket loop.")
+      
       # fetch the new current time
       new.time = fakenow(real.start, fake.start, scale)
       
+      print("new time is")
+      print(new.time)
+      
+      print("time cursor is")
+      print(time.cursor)
+      
       # fetch the row numbers that need to be sent
       new.event.rows = currentevents(time.cursor,new.time)
+      # print(new.event.rows)
       
       if(length(new.event.rows)>0) {
+        print("sending events")
         # we have new events to sent
         events.string = NULL
         
@@ -106,6 +116,8 @@ eventserver <- function(real.start, fake.start, scale=1.0) {
           print(paste0("Total events sent: ", number.events.sent, collapse=""))
         }
         
+      } else {
+        print("length(new.event.rows) == 0")
       }
       # update time.cursor to new time
       time.cursor = new.time
@@ -119,21 +131,40 @@ eventserver <- function(real.start, fake.start, scale=1.0) {
   close.socket(eventsocket)
 }
 
+runevents <- function() {
+  # capture the current time as a datetime number
+  real.start = as.double(now())
+  
+  # determine the datetime number for the date we want to consider now
+  fake.start = as.double(parse_date_time("2011-01-01 12:00:00", c("ymdhms")))
+  
+  # determine the datetime number of the last event
+  #data.end = max(events.sorted$datetime.number)
+  
+  # set scale
+  scale = 20000.0
+  
+  # set row cursor, events before (and including) this time have been replayed
+  time.cursor = fakenow(real.start, fake.start, scale)
+  
+  # serve stream
+  eventserver(real.start, fake.start, scale)
+}
 ###
 # START STREAM
 ###
 
 # capture the current time as a datetime number
-real.start = as.double(now())
+real.start = as.double(now() + 30)
 
 # determine the datetime number for the date we want to consider now
 fake.start = as.double(parse_date_time("2011-01-01 12:00:00", c("ymdhms")))
 
 # determine the datetime number of the last event
-data.end = max(events.sorted$datetimenumber)
+#data.end = max(events.sorted$datetime.number)
 
 # set scale
-scale = 1000.0
+scale = 20000.0
 
 # set row cursor, events before (and including) this time have been replayed
 time.cursor = fakenow(real.start, fake.start, scale)

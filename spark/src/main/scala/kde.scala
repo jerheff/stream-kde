@@ -1,6 +1,6 @@
 package com.azavea.jheffner.kde
 
-import spark.streaming.{Seconds, Minutes, StreamingContext}
+import spark.streaming.{Milliseconds, Seconds, Minutes, StreamingContext}
 import StreamingContext._
 import spark.SparkContext._
 
@@ -61,7 +61,7 @@ object KDE {
     }
 
     def returnCellForPoint(p: Point): Cell = {
-      new Cell(((maxY - p.y) / cellSize).toInt, ((maxX - p.x) / cellSize).toInt)
+      new Cell(((maxY - p.y) / cellSize).toInt, ((p.x - minX) / cellSize).toInt)
     }
 
     override def toString(): String = "Extent: (" + minX + ", " + minY + ") to (" + maxX + ", " + maxY + ") Cellsize: " + cellSize
@@ -132,6 +132,25 @@ object KDE {
     }
 }
 
+  
+
+  object Kernel {
+    def server = geotrellis.process.TestServer()
+    def makeGaussianKernel(size: Int, cellWidth: Double, sigma: Double, amp: Double) = {
+       val n = size
+       val denom = 2.0*sigma*sigma
+       var r = 0
+       var c = 0
+       val mid = (n/2.toInt)
+       for(r <- 0 until n;
+           c <- 0 until n) yield {
+           val rsqr = (c - n/2)*(c - n/2) + (r - n/2)*(r - n/2)
+           val g = (amp * (math.exp(-rsqr / denom)))
+           (new Cell(r - mid, c - mid), g)
+         }
+    }
+  } 
+
   // Kernel represents the kernel split used in the KDE
   class Kernel(cellSize: Double, kernel: String, bandWidth: Double) extends Serializable {
     override def toString(): String = "Kernel: " + kernel + " with bandwidth: " + bandWidth
@@ -143,6 +162,15 @@ object KDE {
               (new Cell(1,0), 1.0 / 5),
               (new Cell(0,1), 1.0 / 5),
               (new Cell(0,-1), 1.0 / 5))
+
+      case "square" => {
+        val cells = for( i <- -5 until 5;
+                         j <- -5 until 5 ) yield {
+          (new Cell(i, j), 1/ 11.0  * 11)
+        }
+        cells.toList
+      }
+      case "gaussian" => Kernel.makeGaussianKernel(25, 1.0, 5, 100).toList
       case _ => List((new Cell(0,0), 1))
     }
   }
@@ -209,10 +237,10 @@ object KDE {
     val Array(minX, minY, maxX, maxY) = extentString.split(",").map(n => n.toDouble)
 
     // duration of batches coming into the stream
-    val streamBatchDuration = 5 // seconds
+    val streamBatchDuration = 2000 // milliseconds
 
     // overall stream duration to measure
-    val streamOverallDuration = 60*60*6 // 6 hours in seconds
+    val streamOverallDuration = 20 // 60*60*6 // 6 hours in seconds
 
       // size of cells (width and height)
     val cellSize = cellSizeString.toDouble // map units
@@ -221,22 +249,22 @@ object KDE {
     val extent = new SpatialExtent(minX, minY, maxX, maxY, cellSize)
   
     // create our kernel
-    val kernel = new Kernel(1, "rook", 1)
+    val kernel = new Kernel(1, "gaussian", 1)
   
     // raster data directory 
-    val rasterDirectory = "/Users/jeremy/Documents/Development/github/stream-kde/spark/rasters/"
+    val rasterDirectory = "/home/jmarcus/projects/github/stream-kde/spark/rasters/"
   
     // hdfs checkpoint directory
-    val hdfsDirectory = "/Users/jeremy/Documents/Development/github/stream-kde/spark/hdfs"
+    val hdfsDirectory = "/home/jmarcus/projects/github/stream-kde/spark/hdfs"
   
     // PREP WORK DONE 
   
   
     // set config
     System.setProperty("spark.ui.port", "8080")
-    System.setProperty("spark.cleaner.ttl", (streamOverallDuration + 60).toString)
+    System.setProperty("spark.cleaner.ttl", (streamOverallDuration + 600).toString)
   
-    val ssc = new StreamingContext(master, "KDE", Seconds(streamBatchDuration), 
+    val ssc = new StreamingContext(master, "KDE", Milliseconds(streamBatchDuration), 
                                  System.getenv("SPARK_HOME"), Seq(System.getenv("SPARK_JAR")))
 
     // setup checkpointing
@@ -263,8 +291,8 @@ object KDE {
                     })
   
     // assemble into sliding window
-    val overallKDE = kdeStream.reduceByKeyAndWindow(_ + _, _ - _, Seconds(streamOverallDuration), Seconds(streamBatchDuration))
-    overallKDE.checkpoint(Seconds(5*streamBatchDuration))
+    val overallKDE = kdeStream.reduceByKeyAndWindow(_ + _, _ - _, Seconds(streamOverallDuration), Milliseconds(streamBatchDuration))
+    overallKDE.checkpoint(Milliseconds(20*streamBatchDuration))
 
   
     // with each result from the sliding window:
@@ -279,8 +307,11 @@ object KDE {
     
       // write an arg for further use
       val argWriter = ArgWriter(TypeFloat)
-      argWriter.write(rasterDirectory + "overallkde.arg", raster, "overallkde")
-    
+      val tmpString = "tmp_"
+      val outputPath = rasterDirectory + tmpString + "overallkde"
+      argWriter.write(outputPath + ".arg", raster, "overallkde")
+      (new java.io.File(outputPath + ".arg")).renameTo(new java.io.File(rasterDirectory + "overallkde.arg")) 
+      (new java.io.File(outputPath + ".json")).renameTo(new java.io.File(rasterDirectory + "overallkde.json")) 
     })
     
   
